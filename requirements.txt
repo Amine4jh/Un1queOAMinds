@@ -1,6 +1,6 @@
 langgraph
 langchain-core
-anthropic
+ibm-watsonx-ai
 python-dotenv
 fastapi
 uvicorn

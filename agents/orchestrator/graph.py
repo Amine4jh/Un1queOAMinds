@@ -2,16 +2,16 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 from langgraph.graph import StateGraph, START, END
-from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from agents.state import AgentState
 from agents.dependency.agent import dependency_agent
 from agents.database.agent import database_agent
 from agents.test_agent.agent import test_agent
+from agents.bob_client import get_model, chat
 
 load_dotenv()
-client = Anthropic()
+model = get_model()
 
 
 # ═══════════════════════════════════════
@@ -67,14 +67,8 @@ Return ONLY valid JSON:
 }}
 """
 
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
     try:
-        text = response.content[0].text
+        text = chat(model, prompt)
         text = text.replace("```json", "").replace("```", "").strip()
         result = json.loads(text)
     except:
@@ -116,14 +110,8 @@ Return ONLY valid JSON:
 }}
 """
 
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
     try:
-        text = response.content[0].text
+        text = chat(model, prompt)
         text = text.replace("```json", "").replace("```", "").strip()
         result = json.loads(text)
         plan = result.get("implementation_plan", "")
@@ -199,14 +187,8 @@ Return ONLY valid JSON:
 }}
 """
 
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=2000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
     try:
-        text = response.content[0].text
+        text = chat(model, prompt)
         text = text.replace("```json", "").replace("```", "").strip()
         result = json.loads(text)
         success = result.get("success", False)

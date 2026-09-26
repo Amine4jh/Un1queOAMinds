@@ -1,10 +1,10 @@
 import os
 import json
-from anthropic import Anthropic
 from dotenv import load_dotenv
+from agents.bob_client import get_model, chat
 
 load_dotenv()
-client = Anthropic()
+model = get_model()
 
 def database_agent(state: dict) -> dict:
     """
@@ -70,14 +70,8 @@ Return ONLY valid JSON:
 }}
 """
 
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
     try:
-        text = response.content[0].text
+        text = chat(model, prompt)
         text = text.replace("```json", "").replace("```", "").strip()
         result = json.loads(text)
         db_impact = result.get("tables_impacted", [])
