@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────
+#  IBM_BOB_2.0 — docker-compose.yml  (LOCAL development only)
+#
+#  Usage:
+#    docker compose up --build          # start everything
+#    docker compose up --build -d       # detached (background)
+#    docker compose down                # stop & remove containers
+#    docker compose logs -f bob         # live logs
+#
+#  For deployment to Render/Fly/Railway:
+#    → Push to GitHub. payment_demo is already bundled inside
+#      the image (payment/IBM-bob-payment-demo/).
+#    → Set env vars in the platform dashboard — do NOT commit .env.
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Main FastAPI application ──────────────────────────────
+  bob:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ibm_bob
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"   # http://localhost:8000
+
+    # Load IBM credentials from your local .env file.
+    # These are NEVER baked into the image.
+    env_file:
+      - .env
+
+    # payment_demo is already bundled in the image at:
+    #   /app/payment/IBM-bob-payment-demo
+    # The .env REPO_PATH should match:
+    #   REPO_PATH=./payment/IBM-bob-payment-demo
+    #
+    # Optionally override to mount a live local copy for development:
+    # volumes:
+    #   - ../payment_demo:/app/payment/IBM-bob-payment-demo:ro
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

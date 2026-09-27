@@ -1,580 +1,1378 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bob Change Impact Mode</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: {} },
-      plugins: []
-    };
-  </script>
-  <style>
-    /* Prose-like styles for markdown output since CDN Tailwind Typography is not always bundled */
-    .prose h1  { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .prose h2  { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
-    .prose h3  { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.4rem; }
-    .prose p   { margin-bottom: 0.75rem; line-height: 1.6; }
-    .prose ul  { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-    .prose ol  { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-    .prose li  { margin-bottom: 0.25rem; }
-    .prose pre { background: #f3f4f6; padding: 0.75rem; border-radius: 0.375rem; overflow-x: auto; margin-bottom: 0.75rem; }
-    .prose code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.875rem; }
-    .prose pre code { background: transparent; padding: 0; }
-    .prose table { border-collapse: collapse; width: 100%; margin-bottom: 0.75rem; }
-    .prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; }
-    .prose th { background: #f9fafb; font-weight: 600; }
-    .prose strong { font-weight: 700; }
-    .prose em { font-style: italic; }
-    .prose a { color: #3b82f6; text-decoration: underline; }
-    .prose blockquote { border-left: 4px solid #e5e7eb; padding-left: 1rem; color: #6b7280; margin-bottom: 0.75rem; }
-  </style>
-</head>
-<body class="bg-gray-100 min-h-screen font-sans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bob Impact — Change Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#ecfeff",
+                100: "#cffafe",
+                200: "#a5f3fc",
+                300: "#67e8f9",
+                400: "#22d3ee",
+                500: "#06b6d4",
+                600: "#0891b2",
+                700: "#0e7490",
+                800: "#155e75",
+                900: "#164e63",
+              },
 
-  <!-- Header -->
-  <header id="header" class="bg-gray-900 text-white px-6 py-4 shadow-lg">
-    <div class="max-w-3xl mx-auto flex items-center gap-3">
-      <span class="text-2xl">🤖</span>
-      <h1 class="text-xl font-bold tracking-tight">Bob Change Impact Mode</h1>
-    </div>
-  </header>
+              accent: {
+                400: "#a78bfa",
+                500: "#8b5cf6",
+                600: "#7c3aed",
+              },
 
-  <!-- Main content -->
-  <main class="max-w-3xl mx-auto px-4 py-8">
+              surface: {
+                950: "#080b12",
+                900: "#0f172a",
+                800: "#151d2e",
+                700: "#1e293b",
+              },
+            },
+            fontFamily: {
+              sans: [
+                'Inter',
+                "-apple-system",
+                "BlinkMacSystemFont",
+                '"Segoe UI"',
+                "Inter",
+                "system-ui",
+                "sans-serif",
+              ],
+              mono: [
+                '"Fira Code"',
+                '"Cascadia Code"',
+                "ui-monospace",
+                "monospace",
+              ],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      /* ── Base resets ── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
 
-    <!-- Form section -->
-    <section id="form-section" class="bg-white rounded-xl shadow-md p-6 mb-6">
-      <h2 class="text-lg font-semibold text-gray-800 mb-4">Describe your change</h2>
-      <div class="space-y-4">
-        <div>
-          <label for="change-desc" class="block text-sm font-medium text-gray-700 mb-1">
-            Change description
-          </label>
-          <input
-            id="change-desc"
-            type="text"
-            placeholder="e.g. Add PayPal support to the checkout flow"
-            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div>
-          <label for="repo-path" class="block text-sm font-medium text-gray-700 mb-1">
-            Repository path
-          </label>
-          <input
-            id="repo-path"
-            type="text"
-            placeholder="e.g. ./payment_demo"
-            class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div class="flex justify-end">
-          <button
-            id="analyse-btn"
-            class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-8 py-2 rounded-lg transition-colors"
+      /* ── Custom scrollbar ── */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+
+      /* ── Stage card slide-in ── */
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .stage-card {
+        animation: slideIn 0.3s ease both;
+      }
+
+      /* ── Pulse dot for "active" state ── */
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      .pulse-dot {
+        animation: pulse-dot 1.4s ease-in-out infinite;
+      }
+
+      /* ── Pipeline connector line ── */
+      .pipeline-line {
+        position: relative;
+      }
+      .pipeline-line::before {
+        content: "";
+        position: absolute;
+        left: 19px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #cffafe 0%, #cffafe 100%);
+        z-index: 0;
+      }
+
+      /* ── Markdown prose ── */
+      .prose h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0.75rem 0 0.4rem;
+        color: #111827;
+      }
+      .prose h2 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0.65rem 0 0.35rem;
+        color: #1f2937;
+      }
+      .prose h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0.5rem 0 0.3rem;
+        color: #374151;
+      }
+      .prose p {
+        margin-bottom: 0.65rem;
+        line-height: 1.65;
+        color: #374151;
+      }
+      .prose ul {
+        list-style: none;
+        padding-left: 0;
+        margin-bottom: 0.65rem;
+      }
+      .prose ul li {
+        position: relative;
+        padding-left: 1.25rem;
+        margin-bottom: 0.25rem;
+        color: #374151;
+      }
+      .prose ul li::before {
+        content: "›";
+        position: absolute;
+        left: 0;
+        color: #06b6d4;
+        font-weight: 700;
+      }
+      .prose ol {
+        list-style: decimal;
+        padding-left: 1.5rem;
+        margin-bottom: 0.65rem;
+      }
+      .prose ol li {
+        margin-bottom: 0.25rem;
+        color: #374151;
+      }
+      .prose pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 0.75rem;
+        font-family: "Fira Code", ui-monospace, monospace;
+        font-size: 0.8rem;
+        line-height: 1.6;
+      }
+      .prose code {
+        background: #ecfeff;
+        color: #0e7490;
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-family: "Fira Code", ui-monospace, monospace;
+      }
+      .prose pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+      }
+      .prose table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+      }
+      .prose th {
+        background: #f8fafc;
+        font-weight: 600;
+        color: #374151;
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+      }
+      .prose td {
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem 0.75rem;
+        color: #4b5563;
+      }
+      .prose strong {
+        font-weight: 600;
+        color: #111827;
+      }
+      .prose em {
+        font-style: italic;
+        color: #6b7280;
+      }
+      .prose a {
+        color: #0891b2;
+        text-decoration: none;
+        border-bottom: 1px solid #a5f3fc;
+      }
+      .prose a:hover {
+        border-bottom-color: #0891b2;
+      }
+      .prose blockquote {
+        border-left: 3px solid #06b6d4;
+        padding-left: 1rem;
+        color: #6b7280;
+        margin: 0.75rem 0;
+        font-style: italic;
+        background: #ecfeff;
+        padding: 0.5rem 1rem;
+        border-radius: 0 0.375rem 0.375rem 0;
+      }
+      .prose hr {
+        border: none;
+        border-top: 1px solid #e5e7eb;
+        margin: 1rem 0;
+      }
+
+      /* ── Input focus glow ── */
+      .input-field {
+        transition:
+          box-shadow 0.15s,
+          border-color 0.15s;
+      }
+      .input-field:focus {
+        outline: none;
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+      }
+
+      /* ── Agent badge strip ── */
+      .agent-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      /* ── Run button shimmer ── */
+      @keyframes shimmer {
+        from {
+          background-position: -200% center;
+        }
+        to {
+          background-position: 200% center;
+        }
+      }
+      .btn-running {
+        background: linear-gradient(
+          90deg,
+          #0891b2 0%,
+          #22d3ee 50%,
+          #0891b2 100%
+        );
+        background-size: 200% auto;
+        animation: shimmer 1.8s linear infinite;
+        cursor: not-allowed;
+      }
+
+      /* ── Risk meter bar ── */
+      .risk-bar-fill {
+        height: 6px;
+        border-radius: 3px;
+        transition: width 0.6s ease;
+      }
+
+      /* ── Approval card glow ── */
+      .approval-glow {
+        box-shadow:
+          0 0 0 2px #fbbf24,
+          0 4px 24px rgba(251, 191, 36, 0.15);
+      }
+
+      /* ── Final success glow ── */
+      .success-glow {
+        box-shadow:
+          0 0 0 2px #10b981,
+          0 4px 24px rgba(16, 185, 129, 0.15);
+      }
+
+      /* ── Divider gradient ── */
+      .stage-divider {
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stage-divider::after {
+        content: "";
+        width: 2px;
+        height: 100%;
+        background: linear-gradient(to bottom, #cffafe, #a5f3fc);
+        border-radius: 1px;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 min-h-screen font-sans antialiased">
+    <!-- ── TOP NAV ── -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <div
+        class="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between"
+      >
+        <!-- Logo + wordmark -->
+        <div class="flex items-center gap-3">
+          <div
+            class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center flex-shrink-0"
           >
-            Analyse
-          </button>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle cx="10" cy="10" r="8" stroke="white" stroke-width="1.5" />
+              <path
+                d="M7 10h6M10 7v6"
+                stroke="white"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div class="flex items-baseline gap-1.5">
+            <span
+              class="font-bold text-slate-900 tracking-tight text-base leading-none"
+              >Bob Impact</span
+            >
+            <span class="text-xs text-slate-400 font-medium leading-none"
+              >by Un1queOAMinds</span
+            >
+          </div>
+        </div>
+        <!-- Pipeline label -->
+        <div
+          class="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 font-medium"
+        >
+          <span class="agent-pill" style="background:#f5f3ff;color:#7c3aed;"
+            >Dependency Agent</span
+          >
+          <span class="agent-pill bg-brand-50 text-brand-700">Database Agent</span>
+          <span class="agent-pill bg-emerald-50 text-emerald-700"
+            >Test Agent</span
+          >
         </div>
       </div>
-    </section>
+    </header>
 
-    <!-- Stages container -->
-    <div id="stages-container" class="space-y-4"></div>
+    <!-- ── HERO INPUT AREA ── -->
+    <div class="bg-white border-b border-slate-200">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight mb-1">
+            Change Impact Analysis
+          </h1>
+          <p class="text-sm text-slate-500">
+            Describe your change — Bob will run three parallel agents, assess
+            risk, plan the implementation, and execute with your approval.
+          </p>
+        </div>
 
-    <!-- Error panel -->
-    <details id="error-panel" class="hidden mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
-      <summary class="cursor-pointer text-red-600 font-semibold select-none">
-        ⚠ Errors
-      </summary>
-      <ul id="error-list" class="mt-3 space-y-1 text-sm text-red-700 list-disc pl-5"></ul>
-    </details>
+        <!-- Workflow breadcrumb -->
+        <div class="flex items-center gap-0 mb-7 overflow-x-auto pb-1">
+          <div
+            class="flex-shrink-0 flex items-center gap-1 text-xs text-brand-600 font-semibold bg-brand-50 px-2.5 py-1 rounded-full"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+              <circle cx="6" cy="6" r="5" />
+            </svg>
+            Change Request
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Analyze
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Impact Report
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Plan
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Approval
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Execute
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Tests
+          </div>
+          <div class="flex-shrink-0 w-5 h-px bg-slate-200 mx-1"></div>
+          <div
+            class="flex-shrink-0 text-xs text-slate-400 font-medium px-2.5 py-1"
+          >
+            Final Report
+          </div>
+        </div>
 
-  </main>
+        <!-- Input form -->
+        <div id="form-section" class="space-y-3">
+          <div>
+            <label
+              for="change-desc"
+              class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide"
+            >
+              Change Description
+            </label>
+            <input
+              id="change-desc"
+              type="text"
+              placeholder="e.g. Add PayPal support to the checkout flow"
+              class="input-field w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 bg-white"
+            />
+          </div>
+          <div class="flex items-end gap-3">
+            <div class="flex-1">
+              <label
+                for="repo-path"
+                class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide"
+              >
+                Repository Path
+              </label>
+              <input
+                id="repo-path"
+                type="text"
+                placeholder="e.g. ./payment_demo"
+                class="input-field w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 bg-white"
+              />
+            </div>
+            <button
+              id="analyse-btn"
+              class="flex-shrink-0 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-7 py-2.5 rounded-lg text-sm transition-all duration-150 flex items-center gap-2"
+            >
+              <svg
+                id="btn-icon"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M3 8h10M9 4l4 4-4 4"
+                  stroke="white"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span id="btn-label">Analyse</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <script>
-    /* ─────────────────────────────────────────────
+    <!-- ── MAIN CONTENT ── -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <!-- Stages container -->
+      <div id="stages-container" class="space-y-0"></div>
+
+      <!-- Error panel -->
+      <details id="error-panel" class="hidden mt-6">
+        <summary
+          class="cursor-pointer select-none flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-5 py-3 text-red-700 font-semibold text-sm hover:bg-red-100 transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="7" stroke="#ef4444" stroke-width="1.5" />
+            <path
+              d="M8 5v4M8 11v.5"
+              stroke="#ef4444"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
+          Errors
+          <span
+            id="error-count"
+            class="ml-auto bg-red-200 text-red-800 text-xs font-bold px-2 py-0.5 rounded-full"
+            >0</span
+          >
+        </summary>
+        <div
+          class="mt-2 bg-red-50 border border-red-200 border-t-0 rounded-b-xl px-5 py-4"
+        >
+          <ul id="error-list" class="space-y-1.5 text-sm text-red-700"></ul>
+        </div>
+      </details>
+    </main>
+
+    <!-- ── FOOTER ── -->
+    <footer class="border-t border-slate-200 mt-16 py-6">
+      <div
+        class="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between text-xs text-slate-400"
+      >
+        <span class="font-medium text-slate-500">Bob Impact</span>
+        <span>Powered by IBM Bob 2.0 · Un1queOAMinds</span>
+      </div>
+    </footer>
+
+    <script>
+      /* ─────────────────────────────────────────────
        CONFIG
     ───────────────────────────────────────────── */
-    const BASE_URL = 'http://localhost:8000';
+      const BASE_URL = "http://localhost:8000";
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        STATE
     ───────────────────────────────────────────── */
-    let state = { runId: null, eventSource: null };
+      let state = { runId: null, eventSource: null };
+      let errorCount = 0;
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        DOM REFS
     ───────────────────────────────────────────── */
-    const analyseBtn     = document.getElementById('analyse-btn');
-    const changeDescEl   = document.getElementById('change-desc');
-    const repoPathEl     = document.getElementById('repo-path');
-    const stagesContainer = document.getElementById('stages-container');
-    const errorPanel     = document.getElementById('error-panel');
-    const errorList      = document.getElementById('error-list');
+      const analyseBtn = document.getElementById("analyse-btn");
+      const btnLabel = document.getElementById("btn-label");
+      const btnIcon = document.getElementById("btn-icon");
+      const changeDescEl = document.getElementById("change-desc");
+      const repoPathEl = document.getElementById("repo-path");
+      const stagesContainer = document.getElementById("stages-container");
+      const errorPanel = document.getElementById("error-panel");
+      const errorList = document.getElementById("error-list");
+      const errorCountEl = document.getElementById("error-count");
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
+       ICONS (inline SVG strings)
+    ───────────────────────────────────────────── */
+      const ICON = {
+        spinner: `<svg class="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="10" opacity="0.3"/><path d="M8 2a6 6 0 016 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+        check: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3.5 3.5 5.5-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        agents: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="4" height="8" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="6" y="2" width="4" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="11" y="5" width="4" height="7" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>`,
+        chart: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12l4-5 3 3 5-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        map: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 4l5 2V14L1 12V4zM6 6l4-2v8l-4 2V6zM10 4l5 2V14l-5-2V4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
+        hand: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v7m3-6v6m3 1V5m-9 8a1 1 0 001 1h5.5a2 2 0 002-2V8a1 1 0 00-1-1H5a1 1 0 00-1 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        rocket: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C8 1.5 12.5 3 13 8.5l-5 5-5-5C3.5 3 8 1.5 8 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="8" cy="7" r="1.5" stroke="currentColor" stroke-width="1.3"/></svg>`,
+        flask: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.5 1h5M5.5 1v5.5L2 13a1 1 0 001 1h10a1 1 0 001-1L10.5 6.5V1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        doc: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 5h4M6 8h4M6 11h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+        file: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 1h5.5L10 3.5V11H2V1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 1v3h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+        db: `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><ellipse cx="6" cy="3" rx="4" ry="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 3v6c0 .83 1.79 1.5 4 1.5s4-.67 4-1.5V3" stroke="currentColor" stroke-width="1.2"/><path d="M2 6c0 .83 1.79 1.5 4 1.5S10 6.83 10 6" stroke="currentColor" stroke-width="1.2"/></svg>`,
+      };
+
+      /* ─────────────────────────────────────────────
        BADGE HELPERS
     ───────────────────────────────────────────── */
-    function riskBadge(level) {
-      const map = {
-        HIGH:   'bg-red-100 text-red-800',
-        MEDIUM: 'bg-orange-100 text-orange-800',
-        LOW:    'bg-yellow-100 text-yellow-800'
-      };
-      const cls = map[(level || '').toUpperCase()] || 'bg-gray-100 text-gray-800';
-      return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${cls}">${level}</span>`;
-    }
+      function riskBadge(level) {
+        const lvl = (level || "").toUpperCase();
+        const cfg = {
+          HIGH: {
+            bg: "bg-red-100",
+            text: "text-red-700",
+            dot: "bg-red-500",
+            label: "🔴 High",
+          },
+          MEDIUM: {
+            bg: "bg-amber-100",
+            text: "text-amber-700",
+            dot: "bg-amber-500",
+            label: "🟠 Medium",
+          },
+          LOW: {
+            bg: "bg-emerald-100",
+            text: "text-emerald-700",
+            dot: "bg-emerald-500",
+            label: "🟡 Low",
+          },
+          UNKNOWN: {
+            bg: "bg-slate-100",
+            text: "text-slate-600",
+            dot: "bg-slate-400",
+            label: level || "Unknown",
+          },
+        };
+        const c = cfg[lvl] || cfg.UNKNOWN;
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${c.bg} ${c.text}">
+        <span class="w-1.5 h-1.5 rounded-full ${c.dot} inline-block"></span>${c.label}</span>`;
+      }
 
-    function testBadge(result) {
-      const pass = (result || '').toLowerCase() === 'pass';
-      const cls = pass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-      return `<span class="inline-block px-2 py-1 rounded text-xs font-bold ${cls}">${(result || '').toUpperCase()}</span>`;
-    }
+      function testBadge(result) {
+        const pass =
+          (result || "").toLowerCase() === "pass" ||
+          (result || "").toLowerCase() === "passed";
+        return pass
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">${ICON.check} Pass</span>`
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Fail</span>`;
+      }
 
-    function statusBadge(label, colour) {
-      const colourMap = {
-        green:  'bg-green-100 text-green-800',
-        orange: 'bg-orange-100 text-orange-800',
-        red:    'bg-red-100 text-red-800',
-        blue:   'bg-blue-100 text-blue-800',
-        gray:   'bg-gray-100 text-gray-800'
-      };
-      const cls = colourMap[colour] || colourMap.gray;
-      return `<span class="inline-block px-3 py-1 rounded-full text-sm font-bold ${cls}">${label}</span>`;
-    }
+      function statusBadge(label, colour) {
+        const map = {
+          green: "bg-emerald-100 text-emerald-700",
+          orange: "bg-amber-100 text-amber-700",
+          red: "bg-red-100 text-red-700",
+          blue: "bg-brand-100 text-brand-700",
+          gray: "bg-slate-100 text-slate-600",
+        };
+        const cls = map[colour] || map.gray;
+        return `<span class="inline-block px-3 py-1 rounded-full text-xs font-bold tracking-wide ${cls}">${label}</span>`;
+      }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        CARD FACTORY
     ───────────────────────────────────────────── */
-    function createCard(id, title, borderColour) {
-      const card = document.createElement('div');
-      card.id = id;
-      card.className = `bg-white rounded-xl shadow-md border-l-4 ${borderColour} p-6 mb-4 transition-all`;
-      card.innerHTML = `
-        <h2 class="text-lg font-semibold text-gray-800 mb-3">${title}</h2>
-        <div class="card-content"></div>
+      // Stage card accent colours aligned with design system:
+      // brand=cyan  accent=violet  semantic: amber=warning, emerald=success, teal=test, slate=neutral
+      const STAGE_COLOURS = {
+        "stage-1": {
+          accent: "border-accent-500",
+          icon_style: "background:#ede9fe;color:#7c3aed;",
+        },
+        "stage-2": {
+          accent: "border-brand-500",
+          icon_style: "background:#cffafe;color:#0e7490;",
+        },
+        "stage-3": {
+          accent: "border-accent-400",
+          icon_style: "background:#ede9fe;color:#8b5cf6;",
+        },
+        "stage-4": {
+          accent: "border-amber-500",
+          icon_style: "background:#fef3c7;color:#d97706;",
+        },
+        "stage-5": {
+          accent: "border-emerald-500",
+          icon_style: "background:#d1fae5;color:#059669;",
+        },
+        "stage-6": {
+          accent: "border-teal-500",
+          icon_style: "background:#ccfbf1;color:#0f766e;",
+        },
+        "stage-7": {
+          accent: "border-slate-400",
+          icon_style: "background:#f1f5f9;color:#64748b;",
+        },
+      };
+
+      function createCard(id, icon, title, extraClass) {
+        const colours = STAGE_COLOURS[id] || STAGE_COLOURS["stage-7"];
+        const card = document.createElement("div");
+        card.id = id;
+        card.className = `stage-card bg-white rounded-xl border border-slate-200 border-l-4 ${colours.accent} shadow-sm ${extraClass || ""}`;
+        card.innerHTML = `
+        <div class="p-5 pb-4 border-b border-slate-100 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="${colours.icon_style}">${icon}</div>
+          <h2 class="text-sm font-semibold text-slate-800 leading-snug">${title}</h2>
+          <div class="ml-auto stage-status"></div>
+        </div>
+        <div class="card-content p-5 text-sm"></div>
       `;
-      return card;
-    }
+        return card;
+      }
 
-    function appendCard(id, title, borderColour) {
-      // Remove existing card with same id if present (re-runs)
-      const existing = document.getElementById(id);
-      if (existing) existing.remove();
-      const card = createCard(id, title, borderColour);
-      stagesContainer.appendChild(card);
-      return card.querySelector('.card-content');
-    }
+      function appendCard(id, icon, title, extraClass) {
+        const existing = document.getElementById(id);
+        if (existing) existing.remove();
+        // Add divider between cards
+        if (stagesContainer.children.length > 0) {
+          const div = document.createElement("div");
+          div.className = "stage-divider";
+          stagesContainer.appendChild(div);
+        }
+        const card = createCard(id, icon, title, extraClass);
+        stagesContainer.appendChild(card);
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        return card.querySelector(".card-content");
+      }
 
-    /* ─────────────────────────────────────────────
+      function setCardStatus(id, statusHtml) {
+        const card = document.getElementById(id);
+        if (card) card.querySelector(".stage-status").innerHTML = statusHtml;
+      }
+
+      const RUNNING_STATUS = `<span class="inline-flex items-center gap-1.5 text-xs text-brand-600 font-medium">
+      <span class="pulse-dot w-2 h-2 rounded-full bg-brand-500 inline-block"></span>Running</span>`;
+      const DONE_STATUS = `<span class="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Done</span>`;
+
+      /* ─────────────────────────────────────────────
        SPINNER HTML
     ───────────────────────────────────────────── */
-    const SPINNER_HTML = `
-      <div class="flex items-center gap-2 text-gray-500">
-        <div class="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-        <span>Running three agents in parallel…</span>
+      const SPINNER_HTML = `
+      <div class="flex items-start gap-4 py-1">
+        <div class="flex flex-col gap-2 w-full">
+          <!-- Three agent rows -->
+          <div class="flex items-center gap-3 p-3 rounded-lg border" style="background:#f5f3ff;border-color:#ede9fe;">
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#ede9fe;color:#7c3aed;">${ICON.agents}</span>
+            <div class="flex-1">
+              <div class="text-xs font-semibold mb-0.5" style="color:#4c1d95;">Dependency Agent</div>
+              <div class="text-xs" style="color:#7c3aed;">Mapping affected files and modules…</div>
+            </div>
+            <div style="color:#7c3aed;">${ICON.spinner}</div>
+          </div>
+          <div class="flex items-center gap-3 p-3 bg-brand-50 rounded-lg border border-brand-100">
+            <span class="w-7 h-7 rounded-lg bg-brand-100 flex items-center justify-center text-brand-600 flex-shrink-0">${ICON.db}</span>
+            <div class="flex-1">
+              <div class="text-xs font-semibold text-brand-800 mb-0.5">Database Agent</div>
+              <div class="text-xs text-brand-500">Checking schema and data impact…</div>
+            </div>
+            <div class="text-brand-500">${ICON.spinner}</div>
+          </div>
+          <div class="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+            <span class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">${ICON.flask}</span>
+            <div class="flex-1">
+              <div class="text-xs font-semibold text-emerald-800 mb-0.5">Test Agent</div>
+              <div class="text-xs text-emerald-500">Identifying tests to validate…</div>
+            </div>
+            <div class="text-emerald-500">${ICON.spinner}</div>
+          </div>
+        </div>
       </div>
     `;
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        STAGE 1 — Agents Running
     ───────────────────────────────────────────── */
-    function showStage1Spinner() {
-      const content = appendCard('stage-1', '⚙ Stage 1 — Agents Running', 'border-blue-500');
-      content.innerHTML = SPINNER_HTML;
-    }
-
-    function populateStage1(payload) {
-      const card = document.getElementById('stage-1');
-      if (!card) return;
-      const content = card.querySelector('.card-content');
-
-      const affectedFiles = payload.affected_files || [];
-      const dbImpact      = payload.database_impact || [];
-      const testsToRun    = payload.tests_to_run    || [];
-
-      let html = '';
-
-      if (affectedFiles.length) {
-        html += `<h3 class="font-semibold text-gray-700 mt-2 mb-1">Affected Files</h3>
-          <ul class="list-disc pl-5 text-sm text-gray-600 space-y-0.5">
-            ${affectedFiles.map(f => `<li>${escHtml(f)}</li>`).join('')}
-          </ul>`;
+      function showStage1Spinner() {
+        const content = appendCard(
+          "stage-1",
+          ICON.agents,
+          "Stage 1 — Parallel Agents",
+        );
+        content.innerHTML = SPINNER_HTML;
+        setCardStatus("stage-1", RUNNING_STATUS);
       }
 
-      if (dbImpact.length) {
-        html += `<h3 class="font-semibold text-gray-700 mt-4 mb-1">Database Impact</h3>
-          <table class="w-full text-sm border-collapse">
-            <thead><tr class="bg-gray-50">
-              <th class="border border-gray-200 px-3 py-2 text-left">Table</th>
-              <th class="border border-gray-200 px-3 py-2 text-left">Risk</th>
-            </tr></thead>
-            <tbody>
-              ${dbImpact.map(row => `
-                <tr>
-                  <td class="border border-gray-200 px-3 py-2">${escHtml(row.table || row.name || JSON.stringify(row))}</td>
-                  <td class="border border-gray-200 px-3 py-2">${riskBadge((row.risk || row.risk_level || '').toUpperCase())}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>`;
+      function populateStage1(payload) {
+        const card = document.getElementById("stage-1");
+        if (!card) return;
+        const content = card.querySelector(".card-content");
+
+        const affectedFiles = payload.affected_files || [];
+        const dbImpact = payload.database_impact || [];
+        const testsToRun = payload.tests_to_run || [];
+
+        let html = `<div class="grid sm:grid-cols-3 gap-4">`;
+
+        // Dependency Agent result
+        html += `<div class="rounded-lg border p-3" style="background:#f5f3ff;border-color:#ede9fe;">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-6 h-6 rounded-md flex items-center justify-center" style="background:#ede9fe;color:#7c3aed;">${ICON.agents}</span>
+          <span class="text-xs font-semibold" style="color:#4c1d95;">Dependency Agent</span>
+          <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 inline-block" title="Complete"></span>
+        </div>`;
+        if (affectedFiles.length) {
+          html += `<ul class="space-y-1">
+          ${affectedFiles
+            .map(
+              (
+                f,
+              ) => `<li class="flex items-center gap-1.5 text-xs text-slate-600">
+            <span class="flex-shrink-0" style="color:#a78bfa;">${ICON.file}</span>
+            <code class="truncate font-mono text-xs">${escHtml(f)}</code>
+          </li>`,
+            )
+            .join("")}
+        </ul>`;
+        } else {
+          html += `<p class="text-xs text-slate-400 italic">No affected files found.</p>`;
+        }
+        html += `</div>`;
+
+        // Database Agent result
+        html += `<div class="rounded-lg border border-brand-100 bg-brand-50 p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-6 h-6 rounded-md bg-brand-100 flex items-center justify-center text-brand-600">${ICON.db}</span>
+          <span class="text-xs font-semibold text-brand-800">Database Agent</span>
+          <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 inline-block" title="Complete"></span>
+        </div>`;
+        if (dbImpact.length) {
+          html += `<ul class="space-y-1.5">
+          ${dbImpact
+            .map((row) => {
+              const tableName = escHtml(
+                row.table || row.name || JSON.stringify(row),
+              );
+              const riskLvl = (row.risk || row.risk_level || "").toUpperCase();
+              return `<li class="flex items-center justify-between gap-2">
+              <span class="text-xs font-mono text-slate-700 truncate">${tableName}</span>
+              ${riskBadge(riskLvl)}
+            </li>`;
+            })
+            .join("")}
+        </ul>`;
+        } else {
+          html += `<p class="text-xs text-slate-400 italic">No DB impact found.</p>`;
+        }
+        html += `</div>`;
+
+        // Test Agent result
+        html += `<div class="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-6 h-6 rounded-md bg-emerald-100 flex items-center justify-center text-emerald-600">${ICON.flask}</span>
+          <span class="text-xs font-semibold text-emerald-800">Test Agent</span>
+          <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 inline-block" title="Complete"></span>
+        </div>`;
+        if (testsToRun.length) {
+          html += `<ul class="space-y-1">
+          ${testsToRun
+            .map(
+              (
+                t,
+              ) => `<li class="flex items-center gap-1.5 text-xs text-slate-600">
+            <span class="text-emerald-400">${ICON.check}</span>
+            <span class="truncate">${escHtml(t)}</span>
+          </li>`,
+            )
+            .join("")}
+        </ul>`;
+        } else {
+          html += `<p class="text-xs text-slate-400 italic">No tests identified.</p>`;
+        }
+        html += `</div>`;
+
+        html += `</div>`;
+        content.innerHTML = html;
+        setCardStatus("stage-1", DONE_STATUS);
       }
 
-      if (testsToRun.length) {
-        html += `<h3 class="font-semibold text-gray-700 mt-4 mb-1">Tests to Run</h3>
-          <ul class="list-disc pl-5 text-sm text-gray-600 space-y-0.5">
-            ${testsToRun.map(t => `<li>${escHtml(t)}</li>`).join('')}
-          </ul>`;
-      }
-
-      content.innerHTML = html || '<p class="text-sm text-gray-500">Agents completed.</p>';
-    }
-
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        STAGE 2 — Impact Report
     ───────────────────────────────────────────── */
-    function createStage2(payload) {
-      const content = appendCard('stage-2', '📊 Stage 2 — Impact Report', 'border-purple-500');
-      const riskLevel = (payload.risk_level || '').toUpperCase();
-      content.innerHTML = `
-        <div class="flex items-center gap-2 mb-3">
-          <span class="text-sm font-medium text-gray-600">Risk:</span>
-          ${riskBadge(riskLevel || 'UNKNOWN')}
-        </div>
-        <div class="prose prose-sm max-w-none text-gray-700">
-          ${marked.parse(payload.impact_summary || '')}
-        </div>
-      `;
-    }
+      function createStage2(payload) {
+        const content = appendCard(
+          "stage-2",
+          ICON.chart,
+          "Stage 2 — Impact Report",
+        );
+        const riskLevel = (payload.risk_level || "").toUpperCase();
 
-    /* ─────────────────────────────────────────────
+        // Risk meter
+        const riskWidth = { HIGH: "90%", MEDIUM: "55%", LOW: "25%" };
+        const riskColor = {
+          HIGH: "bg-red-500",
+          MEDIUM: "bg-amber-400",
+          LOW: "bg-emerald-500",
+        };
+        const rw = riskWidth[riskLevel] || "0%";
+        const rc = riskColor[riskLevel] || "bg-slate-300";
+
+        content.innerHTML = `
+        <div class="mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-wrap items-center gap-4">
+          <div>
+            <div class="text-xs text-slate-500 font-medium mb-1">Overall Risk</div>
+            ${riskBadge(riskLevel || "UNKNOWN")}
+          </div>
+          <div class="flex-1 min-w-[120px]">
+            <div class="text-xs text-slate-500 font-medium mb-1.5">Risk Level</div>
+            <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div class="risk-bar-fill ${rc}" style="width:${rw}"></div>
+            </div>
+          </div>
+        </div>
+        <div class="prose max-w-none">${marked.parse(payload.impact_summary || "")}</div>
+      `;
+        setCardStatus("stage-2", DONE_STATUS);
+      }
+
+      /* ─────────────────────────────────────────────
        STAGE 3 — Implementation Plan
     ───────────────────────────────────────────── */
-    function createStage3(payload) {
-      const content = appendCard('stage-3', '🗺 Stage 3 — Implementation Plan', 'border-indigo-500');
-      content.innerHTML = `
-        <div class="prose prose-sm max-w-none text-gray-700">
-          ${marked.parse(payload.implementation_plan || '')}
-        </div>
+      function createStage3(payload) {
+        const content = appendCard(
+          "stage-3",
+          ICON.map,
+          "Stage 3 — Implementation Plan",
+        );
+        content.innerHTML = `
+        <div class="prose max-w-none">${marked.parse(payload.implementation_plan || "")}</div>
       `;
-    }
+        setCardStatus("stage-3", DONE_STATUS);
+      }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        STAGE 4 — Human Approval
     ───────────────────────────────────────────── */
-    function createStage4(runId) {
-      const content = appendCard('stage-4', '✋ Stage 4 — Human Approval', 'border-yellow-500');
-      content.innerHTML = `
-        <p class="text-sm text-gray-600 mb-4">Review the impact report and implementation plan above, then approve or reject this change.</p>
-        <div id="approval-buttons" class="flex gap-4">
+      function createStage4(runId) {
+        const content = appendCard(
+          "stage-4",
+          ICON.hand,
+          "Stage 4 — Human Approval",
+          "approval-glow",
+        );
+        content.innerHTML = `
+        <div class="flex items-start gap-3 mb-5 p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" class="text-amber-500 flex-shrink-0 mt-0.5"><circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5v5M9 12.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div>
+            <div class="text-sm font-semibold text-amber-800 mb-0.5">Review required</div>
+            <div class="text-xs text-amber-700 leading-relaxed">Review the impact report and implementation plan above, then approve or reject this change. This action cannot be undone.</div>
+          </div>
+        </div>
+        <div id="approval-buttons" class="flex flex-wrap gap-3">
           <button id="approve-btn"
-            class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-            ✅ Approve
+            class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-150 shadow-sm hover:shadow-md">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 4L12 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Approve &amp; Execute
           </button>
           <button id="reject-btn"
-            class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-            ❌ Reject
+            class="flex items-center gap-2 bg-white hover:bg-red-50 border border-red-300 text-red-600 font-semibold py-2.5 px-6 rounded-lg text-sm transition-all duration-150">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Reject
           </button>
         </div>
-        <div id="approval-decision" class="hidden text-base font-semibold mt-2"></div>
+        <div id="approval-decision" class="hidden text-sm font-semibold mt-3"></div>
       `;
 
-      document.getElementById('approve-btn').addEventListener('click', () => sendApproval(runId, true));
-      document.getElementById('reject-btn').addEventListener('click',  () => sendApproval(runId, false));
-    }
-
-    async function sendApproval(runId, approved) {
-      const buttons   = document.getElementById('approval-buttons');
-      const decisionEl = document.getElementById('approval-decision');
-      if (!buttons) return;
-
-      buttons.classList.add('hidden');
-      decisionEl.classList.remove('hidden');
-      decisionEl.textContent = approved ? 'Decision: Approved ✅' : 'Decision: Rejected ❌';
-      decisionEl.className = `text-base font-semibold mt-2 ${approved ? 'text-green-700' : 'text-red-700'}`;
-
-      try {
-        await fetch(`${BASE_URL}/approve/${runId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ approved })
-        });
-      } catch (err) {
-        appendError(`Failed to send approval: ${err.message}`);
+        document
+          .getElementById("approve-btn")
+          .addEventListener("click", () => sendApproval(runId, true));
+        document
+          .getElementById("reject-btn")
+          .addEventListener("click", () => sendApproval(runId, false));
+        setCardStatus("stage-4", RUNNING_STATUS);
       }
-    }
 
-    /* ─────────────────────────────────────────────
+      async function sendApproval(runId, approved) {
+        const buttons = document.getElementById("approval-buttons");
+        const decisionEl = document.getElementById("approval-decision");
+        if (!buttons) return;
+
+        buttons.classList.add("hidden");
+        decisionEl.classList.remove("hidden");
+
+        const card = document.getElementById("stage-4");
+        if (card) {
+          card.classList.remove("approval-glow");
+          if (approved) card.classList.add("success-glow");
+        }
+
+        if (approved) {
+          decisionEl.innerHTML = `<span class="inline-flex items-center gap-2 text-emerald-700">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 4L12 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Approved — executing changes…</span>`;
+        } else {
+          decisionEl.innerHTML = `<span class="inline-flex items-center gap-2 text-red-700">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Rejected — change will not be applied.</span>`;
+        }
+
+        setCardStatus("stage-4", DONE_STATUS);
+
+        try {
+          await fetch(`${BASE_URL}/approve/${runId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ approved }),
+          });
+        } catch (err) {
+          appendError(`Failed to send approval: ${err.message}`);
+        }
+      }
+
+      /* ─────────────────────────────────────────────
        STAGE 5 — Bob Execution
     ───────────────────────────────────────────── */
-    function createStage5(payload) {
-      const content = appendCard('stage-5', '🚀 Stage 5 — Bob Execution', 'border-green-500');
-      const codeModified = payload.code_modified;
-      const affectedFiles = payload.affected_files || [];
+      function createStage5(payload) {
+        const content = appendCard(
+          "stage-5",
+          ICON.rocket,
+          "Stage 5 — Bob Execution",
+        );
+        const codeModified = payload.code_modified;
+        const affectedFiles = payload.affected_files || [];
 
-      const modBadge = codeModified
-        ? statusBadge('Code Modified', 'green')
-        : statusBadge('No Changes', 'gray');
+        const modBadge = codeModified
+          ? `<span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">${ICON.check} Code modified</span>`
+          : `<span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">No changes made</span>`;
 
-      let filesHtml = '';
-      if (affectedFiles.length) {
-        filesHtml = `
-          <ul class="mt-3 space-y-1 text-sm text-gray-600">
-            ${affectedFiles.map(f => `
-              <li class="flex items-center gap-2">
-                <span class="text-gray-400">→</span>
-                <code class="bg-gray-100 px-1 rounded">${escHtml(f)}</code>
-                <span class="text-xs text-gray-500">Modified</span>
-              </li>`).join('')}
-          </ul>`;
-      }
+        let filesHtml = "";
+        if (affectedFiles.length) {
+          filesHtml = `
+          <div class="mt-4 rounded-lg border border-slate-200 overflow-hidden">
+            <div class="bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 border-b border-slate-200">Modified files</div>
+            <ul class="divide-y divide-slate-100">
+              ${affectedFiles
+                .map(
+                  (f) => `
+                <li class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors">
+                  <span class="text-slate-400">${ICON.file}</span>
+                  <code class="text-xs font-mono text-slate-700 flex-1 truncate">${escHtml(f)}</code>
+                  <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded font-medium">modified</span>
+                </li>`,
+                )
+                .join("")}
+            </ul>
+          </div>`;
+        }
 
-      content.innerHTML = `
-        <div class="flex items-center gap-2 mb-2">${modBadge}</div>
+        content.innerHTML = `
+        <div class="flex items-center gap-2">${modBadge}</div>
         ${filesHtml}
       `;
-    }
+        setCardStatus("stage-5", DONE_STATUS);
+      }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        STAGE 6 — Test Results
     ───────────────────────────────────────────── */
-    function createStage6(payload) {
-      const content = appendCard('stage-6', '🧪 Stage 6 — Test Results', 'border-teal-500');
-      const testResults = payload.test_results || payload || {};
-      const perTest = testResults.per_test || testResults.tests || [];
+      function createStage6(payload) {
+        const content = appendCard(
+          "stage-6",
+          ICON.flask,
+          "Stage 6 — Test Results",
+        );
+        const testResults = payload.test_results || payload || {};
+        const perTest = testResults.per_test || testResults.tests || [];
 
-      let passed = 0, failed = 0;
-      perTest.forEach(t => {
-        const r = (t.result || t.status || '').toLowerCase();
-        if (r === 'pass' || r === 'passed') passed++;
-        else failed++;
-      });
-      const total = perTest.length;
+        let passed = 0,
+          failed = 0;
+        perTest.forEach((t) => {
+          const r = (t.result || t.status || "").toLowerCase();
+          if (r === "pass" || r === "passed") passed++;
+          else failed++;
+        });
+        const total = perTest.length;
+        const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+        const passBarColor =
+          failed === 0
+            ? "bg-emerald-500"
+            : passed > failed
+              ? "bg-amber-400"
+              : "bg-red-500";
 
-      let tableHtml = '';
-      if (perTest.length) {
-        tableHtml = `
-          <table class="w-full text-sm border-collapse mt-2">
-            <thead><tr class="bg-gray-50">
-              <th class="border border-gray-200 px-3 py-2 text-left">Test</th>
-              <th class="border border-gray-200 px-3 py-2 text-left">Result</th>
-            </tr></thead>
-            <tbody>
-              ${perTest.map(t => `
-                <tr>
-                  <td class="border border-gray-200 px-3 py-2">${escHtml(t.name || t.test || '')}</td>
-                  <td class="border border-gray-200 px-3 py-2">${testBadge(t.result || t.status || 'fail')}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>`;
-      }
+        let tableHtml = "";
+        if (perTest.length) {
+          tableHtml = `
+          <div class="mt-4 rounded-lg border border-slate-200 overflow-hidden">
+            <div class="bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-500 border-b border-slate-200">Test suite</div>
+            <table class="w-full text-xs">
+              <tbody class="divide-y divide-slate-100">
+                ${perTest
+                  .map(
+                    (t) => `
+                  <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-2.5 font-mono text-slate-700">${escHtml(t.name || t.test || "")}</td>
+                    <td class="px-4 py-2.5 text-right">${testBadge(t.result || t.status || "fail")}</td>
+                  </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>`;
+        }
 
-      content.innerHTML = `
-        <p class="text-sm font-medium text-gray-700">
-          <span class="text-green-700 font-bold">${passed} passed</span> /
-          <span class="text-red-700 font-bold">${failed} failed</span> /
-          <span class="text-gray-600">${total} total</span>
-        </p>
+        content.innerHTML = `
+        <div class="flex flex-wrap items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 mb-1">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl font-bold ${failed === 0 ? "text-emerald-600" : "text-red-600"}">${passed}/${total}</span>
+            <div>
+              <div class="text-xs font-semibold text-slate-700">Tests passing</div>
+              <div class="text-xs text-slate-400">${failed > 0 ? failed + " failing" : "All clear"}</div>
+            </div>
+          </div>
+          <div class="flex-1 min-w-[100px]">
+            <div class="flex justify-between text-xs text-slate-400 mb-1"><span>Pass rate</span><span>${passRate}%</span></div>
+            <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div class="risk-bar-fill ${passBarColor}" style="width:${passRate}%"></div>
+            </div>
+          </div>
+        </div>
         ${tableHtml}
       `;
-    }
+        setCardStatus("stage-6", DONE_STATUS);
+      }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        STAGE 7 — Final Report
     ───────────────────────────────────────────── */
-    function createStage7(payload) {
-      const content = appendCard('stage-7', '📝 Stage 7 — Final Report', 'border-gray-500');
-      const errors        = payload.errors || [];
-      const humanApproved = payload.human_approved;
+      function createStage7(payload) {
+        const errors = payload.errors || [];
+        const humanApproved = payload.human_approved;
 
-      let finalStatus;
-      if (errors.length > 0) {
-        finalStatus = statusBadge('FAILED', 'red');
-      } else if (humanApproved === false) {
-        finalStatus = statusBadge('REJECTED', 'orange');
-      } else {
-        finalStatus = statusBadge('COMPLETED', 'green');
-      }
+        let finalCls = "";
+        let finalBadge, finalHeading;
+        if (errors.length > 0) {
+          finalBadge = statusBadge("Failed", "red");
+          finalHeading = "Pipeline completed with errors";
+          finalCls = "";
+        } else if (humanApproved === false) {
+          finalBadge = statusBadge("Rejected", "orange");
+          finalHeading = "Change rejected by reviewer";
+          finalCls = "";
+        } else {
+          finalBadge = statusBadge("Completed", "green");
+          finalHeading = "Change successfully applied";
+          finalCls = "success-glow";
+        }
 
-      content.innerHTML = `
-        <div class="flex items-center gap-2 mb-4">${finalStatus}</div>
-        <div class="prose prose-sm max-w-none text-gray-700">
-          ${marked.parse(payload.final_report || '')}
+        const content = appendCard(
+          "stage-7",
+          ICON.doc,
+          "Stage 7 — Final Report",
+          finalCls,
+        );
+        content.innerHTML = `
+        <div class="flex flex-wrap items-center gap-3 mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          ${finalBadge}
+          <span class="text-sm text-slate-600 font-medium">${finalHeading}</span>
         </div>
+        <div class="prose max-w-none">${marked.parse(payload.final_report || "")}</div>
       `;
+        setCardStatus("stage-7", DONE_STATUS);
 
-      // Surface any errors from the final payload
-      if (errors.length) {
-        errors.forEach(e => appendError(typeof e === 'string' ? e : JSON.stringify(e)));
+        if (errors.length) {
+          errors.forEach((e) =>
+            appendError(typeof e === "string" ? e : JSON.stringify(e)),
+          );
+        }
       }
-    }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        ERROR PANEL
     ───────────────────────────────────────────── */
-    function appendError(message) {
-      errorPanel.classList.remove('hidden');
-      const li = document.createElement('li');
-      li.textContent = message;
-      errorList.appendChild(li);
-    }
+      function appendError(message) {
+        errorPanel.classList.remove("hidden");
+        errorCount++;
+        errorCountEl.textContent = errorCount;
+        const li = document.createElement("li");
+        li.className = "flex items-start gap-2";
+        li.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="flex-shrink-0 mt-0.5 text-red-400"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M6 3.5v3M6 8v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>${escHtml(message)}</span>`;
+        errorList.appendChild(li);
+      }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        SSE STREAM
     ───────────────────────────────────────────── */
-    function openStream(runId) {
-      if (state.eventSource) {
-        state.eventSource.close();
-      }
-
-      const es = new EventSource(`${BASE_URL}/stream/${runId}`);
-      state.eventSource = es;
-
-      es.onmessage = (evt) => {
-        let parsed;
-        try {
-          parsed = JSON.parse(evt.data);
-        } catch (e) {
-          return;
+      function openStream(runId) {
+        if (state.eventSource) {
+          state.eventSource.close();
         }
-        const { event, payload } = parsed;
-        dispatch(event, payload, runId);
-      };
 
-      es.onerror = (err) => {
-        // Only report if we haven't already cleanly closed
-        if (es.readyState === EventSource.CLOSED) return;
-        appendError('SSE connection error. The server may have closed the stream.');
-        closeStream();
-        analyseBtn.disabled = false;
-        analyseBtn.textContent = 'Analyse';
-      };
-    }
+        const es = new EventSource(`${BASE_URL}/stream/${runId}`);
+        state.eventSource = es;
 
-    function closeStream() {
-      if (state.eventSource) {
-        state.eventSource.close();
-        state.eventSource = null;
+        es.onmessage = (evt) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(evt.data);
+          } catch (e) {
+            return;
+          }
+          const { event, payload } = parsed;
+          dispatch(event, payload, runId);
+        };
+
+        es.onerror = () => {
+          if (es.readyState === EventSource.CLOSED) return;
+          appendError(
+            "SSE connection error. The server may have closed the stream.",
+          );
+          closeStream();
+          resetBtn();
+        };
       }
-    }
 
-    /* ─────────────────────────────────────────────
+      function closeStream() {
+        if (state.eventSource) {
+          state.eventSource.close();
+          state.eventSource = null;
+        }
+      }
+
+      /* ─────────────────────────────────────────────
        EVENT DISPATCHER
     ───────────────────────────────────────────── */
-    function dispatch(event, payload, runId) {
-      switch (event) {
-        case 'pipeline_started':
-          // Stage 1 spinner is already shown; nothing extra needed
-          break;
-        case 'parallel_agents_done':
-          populateStage1(payload);
-          break;
-        case 'impact_report_done':
-          createStage2(payload);
-          break;
-        case 'implementation_plan_done':
-          createStage3(payload);
-          break;
-        case 'awaiting_approval':
-          createStage4(runId);
-          break;
-        case 'bob_execution_done':
-          createStage5(payload);
-          break;
-        case 'test_results_done':
-          createStage6(payload);
-          break;
-        case 'final_report_done':
-          createStage7(payload);
-          closeStream();
-          analyseBtn.disabled = false;
-          analyseBtn.textContent = 'Analyse';
-          break;
-        case 'error':
-          appendError((payload && payload.message) ? payload.message : JSON.stringify(payload));
-          break;
-        default:
-          break;
+      function dispatch(event, payload, runId) {
+        switch (event) {
+          case "pipeline_started":
+            break;
+          case "parallel_agents_done":
+            populateStage1(payload);
+            break;
+          case "impact_report_done":
+            createStage2(payload);
+            break;
+          case "implementation_plan_done":
+            createStage3(payload);
+            break;
+          case "awaiting_approval":
+            createStage4(runId);
+            break;
+          case "bob_execution_done":
+            createStage5(payload);
+            break;
+          case "test_results_done":
+            createStage6(payload);
+            break;
+          case "final_report_done":
+            createStage7(payload);
+            closeStream();
+            resetBtn();
+            break;
+          case "error":
+            appendError(
+              payload && payload.message
+                ? payload.message
+                : JSON.stringify(payload),
+            );
+            break;
+          default:
+            break;
+        }
       }
-    }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
+       BUTTON STATE
+    ───────────────────────────────────────────── */
+      function resetBtn() {
+        analyseBtn.disabled = false;
+        analyseBtn.classList.remove("btn-running");
+        btnLabel.textContent = "Analyse";
+        btnIcon.innerHTML = `<path d="M3 8h10M9 4l4 4-4 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+
+      function setRunningBtn() {
+        analyseBtn.disabled = true;
+        analyseBtn.classList.add("btn-running");
+        btnLabel.textContent = "Running…";
+        btnIcon.innerHTML = `<circle cx="8" cy="8" r="6" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="10"/><path d="M8 2a6 6 0 016 6" stroke="white" stroke-width="2" stroke-linecap="round" class="animate-spin" style="transform-origin:center"/>`;
+      }
+
+      /* ─────────────────────────────────────────────
        MAIN: runPipeline
     ───────────────────────────────────────────── */
-    async function runPipeline() {
-      const changeDesc = changeDescEl.value.trim();
-      const repoPath   = repoPathEl.value.trim();
+      async function runPipeline() {
+        const changeDesc = changeDescEl.value.trim();
+        const repoPath = repoPathEl.value.trim();
 
-      if (!changeDesc) {
-        changeDescEl.focus();
-        changeDescEl.classList.add('border-red-400');
-        return;
-      }
-      changeDescEl.classList.remove('border-red-400');
+        if (!changeDesc) {
+          changeDescEl.focus();
+          changeDescEl.classList.add(
+            "border-red-400",
+            "ring-2",
+            "ring-red-100",
+          );
+          changeDescEl.placeholder = "Please describe your change first…";
+          return;
+        }
+        changeDescEl.classList.remove(
+          "border-red-400",
+          "ring-2",
+          "ring-red-100",
+        );
+        changeDescEl.placeholder =
+          "e.g. Add PayPal support to the checkout flow";
 
-      // Reset UI
-      analyseBtn.disabled = true;
-      analyseBtn.textContent = 'Running…';
-      stagesContainer.innerHTML = '';
-      errorPanel.classList.add('hidden');
-      errorList.innerHTML = '';
-      closeStream();
+        // Reset UI
+        setRunningBtn();
+        stagesContainer.innerHTML = "";
+        errorPanel.classList.add("hidden");
+        errorList.innerHTML = "";
+        errorCount = 0;
+        errorCountEl.textContent = "0";
+        closeStream();
 
-      // Show Stage 1 spinner immediately
-      showStage1Spinner();
+        // Show Stage 1 spinner immediately
+        showStage1Spinner();
 
-      let runId;
-      try {
-        const resp = await fetch(`${BASE_URL}/run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            change_description: changeDesc,
-            repo_path: repoPath || '.'
-          })
-        });
+        let runId;
+        try {
+          const resp = await fetch(`${BASE_URL}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              change_description: changeDesc,
+              repo_path: repoPath || ".",
+            }),
+          });
 
-        if (!resp.ok) {
-          const errText = await resp.text();
-          throw new Error(`Server error ${resp.status}: ${errText}`);
+          if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`Server error ${resp.status}: ${errText}`);
+          }
+
+          const data = await resp.json();
+          runId = data.run_id;
+        } catch (err) {
+          appendError(`Failed to start pipeline: ${err.message}`);
+          resetBtn();
+          return;
         }
 
-        const data = await resp.json();
-        runId = data.run_id;
-      } catch (err) {
-        appendError(`Failed to start pipeline: ${err.message}`);
-        analyseBtn.disabled = false;
-        analyseBtn.textContent = 'Analyse';
-        return;
+        state.runId = runId;
+        openStream(runId);
       }
 
-      state.runId = runId;
-      openStream(runId);
-    }
-
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        UTILITY
     ───────────────────────────────────────────── */
-    function escHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
 
-    /* ─────────────────────────────────────────────
+      /* ─────────────────────────────────────────────
        EVENT LISTENERS
     ───────────────────────────────────────────── */
-    analyseBtn.addEventListener('click', runPipeline);
+      analyseBtn.addEventListener("click", runPipeline);
+      changeDescEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") runPipeline();
+      });
+      repoPathEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") runPipeline();
+      });
 
-    // Allow Enter key in inputs to trigger analysis
-    changeDescEl.addEventListener('keydown', e => { if (e.key === 'Enter') runPipeline(); });
-    repoPathEl.addEventListener('keydown',   e => { if (e.key === 'Enter') runPipeline(); });
-  </script>
-</body>
+      // Clear validation state on input
+      changeDescEl.addEventListener("input", () => {
+        changeDescEl.classList.remove(
+          "border-red-400",
+          "ring-2",
+          "ring-red-100",
+        );
+      });
+    </script>
+  </body>
 </html>

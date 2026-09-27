@@ -1,7 +1,7 @@
 # 🤖 Bob Change Impact Mode — IBM BOB 2.0
 
 > Analyse the impact of a code change **before** it is made.  
-> Powered by **IBM watsonx.ai** (Granite 4), orchestrated with **LangGraph**, and served via **FastAPI**.
+> Powered by **IBM watsonx.ai** (Granite 4), orchestrated with **LangGraph**, and served via **FastAPI + Uvicorn**.
 
 ---
 
@@ -16,6 +16,9 @@
 - [Setup (Virtual Environment)](#setup-virtual-environment)
 - [Configuration](#configuration)
 - [Running the Program](#running-the-program)
+  - [Mode 1 — Web UI (Uvicorn / FastAPI)](#mode-1--web-ui-uvicorn--fastapi-recommended)
+  - [Mode 2 — CLI (terminal)](#mode-2--cli-terminal)
+- [API Endpoints](#api-endpoints)
 - [State Schema](#state-schema)
 - [Troubleshooting](#troubleshooting)
 
@@ -38,28 +41,40 @@ Instead of exploring the codebase manually, you describe your intended change in
 ## Architecture
 
 ```
-main.py
-  └── LangGraph StateGraph (agents/orchestrator/graph.py)
-        │
-        ├── [Parallel] dependency_agent   ← agents/dependency/agent.py
-        ├── [Parallel] database_agent     ← agents/database/agent.py
-        ├── [Parallel] test_agent         ← agents/test_agent/agent.py
-        │
-        ├── impact_report_node            (IBM Granite via watsonx.ai)
-        ├── implementation_plan_node      (IBM Granite via watsonx.ai)
-        ├── human_approval_node           (terminal y/n gate)
-        │
-        ├── [Conditional] bob_execution_node
-        ├── test_runner_node
-        │    └── [Retry router] → bob_execution_node (max 1 retry)
-        │
-        └── final_report_node             (IBM Granite via watsonx.ai)
+┌─────────────────────────────────────────────┐
+│  Web Mode (api.py + index.html)             │
+│  uvicorn api:app --reload --port 8000       │
+└──────────────────────┬──────────────────────┘
+                       │  POST /run  →  SSE /stream/{run_id}
+┌─────────────────────────────────────────────┐
+│  CLI Mode (main.py)                         │
+│  python main.py                             │
+└──────────────────────┬──────────────────────┘
+                       │
+                       ▼
+          LangGraph StateGraph (agents/orchestrator/graph.py)
+                 │
+                 ├── [Parallel] dependency_agent   ← agents/dependency/agent.py
+                 ├── [Parallel] database_agent     ← agents/database/agent.py
+                 ├── [Parallel] test_agent         ← agents/test_agent/agent.py
+                 │
+                 ├── impact_report_node            (IBM Granite via watsonx.ai)
+                 ├── implementation_plan_node      (IBM Granite via watsonx.ai)
+                 ├── human_approval_node           (Web: POST /approve | CLI: y/n gate)
+                 │
+                 ├── [Conditional] bob_execution_node
+                 ├── test_runner_node
+                 │    └── [Retry router] → bob_execution_node (max 1 retry)
+                 │
+                 └── final_report_node             (IBM Granite via watsonx.ai)
 
 Shared IBM watsonx.ai client → agents/bob_client.py
 Shared LangGraph state       → agents/state.py
 ```
 
 All three analysis agents run **concurrently** using `ThreadPoolExecutor(max_workers=3)`.
+
+
 
 ---
 
@@ -132,7 +147,9 @@ Test Runner  →  per-test pass/fail + summary counts
 
 ```
 IBM_BOB_2.0/
-├── main.py                        # Entry point — CLI loop, initial state
+├── api.py                         # FastAPI app — web entry point (uvicorn)
+├── main.py                        # CLI entry point — interactive terminal loop
+├── index.html                     # Single-page frontend served by api.py at GET /
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variable template
 ├── .env                           # Your local credentials (git-ignored)
@@ -263,9 +280,72 @@ REPO_PATH=./payment/IBM-bob-payment-demo
 
 ## Running the Program
 
-Ensure the virtual environment is **activated**, then:
+> **Always activate the virtual environment first** (see [Setup](#setup-virtual-environment)).
 
-```bash
+---
+
+### Mode 1 — Web UI (Uvicorn / FastAPI) ✅ Recommended
+
+`api.py` is the web entry point. It starts a FastAPI server that:
+- Serves the **`index.html`** frontend at `GET /`
+- Accepts pipeline runs via `POST /run`
+- Streams real-time progress via **Server-Sent Events** at `GET /stream/{run_id}`
+- Accepts human approval via `POST /approve/{run_id}`
+
+#### Start the server
+
+```powershell
+# From d:\Work\Hackathon\IBM_BOB_2.0, with venv activated:
+uvicorn api:app --reload --port 8000
+```
+
+| Flag | Effect |
+|---|---|
+| `api:app` | Load the `app` object from `api.py` |
+| `--reload` | Auto-restart on file changes (dev mode) |
+| `--port 8000` | Listen on port 8000 (change freely) |
+
+#### Optional flags
+
+```powershell
+# Bind to all interfaces (useful for LAN / Docker)
+uvicorn api:app --reload --host 0.0.0.0 --port 8000
+
+# Production mode (no reload, multiple workers)
+uvicorn api:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+#### Open the UI
+
+Once the server is running, open your browser at:
+
+```
+http://localhost:8000
+```
+
+The browser loads `index.html`. Fill in:
+- **Change description** — plain-English description of the intended change
+- **Repository path** — path to the JS/TS repo Bob will analyse (e.g. `./payment/IBM-bob-payment-demo`)
+
+Bob streams results in real-time and prompts you to **Approve / Reject** the implementation plan before executing.
+
+#### Expected terminal output on startup
+
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [...]
+INFO:     Started server process [...]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+---
+
+### Mode 2 — CLI (terminal)
+
+`main.py` runs the full pipeline interactively in your terminal (no browser required). Human approval is via a simple `y/n` prompt.
+
+```powershell
 python main.py
 ```
 
@@ -302,6 +382,58 @@ The repository must contain JS/TS source files and optionally a `tests/` directo
 ```bash
 deactivate
 ```
+
+---
+
+## API Endpoints
+
+All endpoints are served by `api.py` when running via uvicorn.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Serves `index.html` (the frontend SPA) |
+| `POST` | `/run` | Start a new pipeline run. Returns a `run_id`. |
+| `GET` | `/stream/{run_id}` | SSE stream of pipeline events for the given run |
+| `POST` | `/approve/{run_id}` | Submit human approval decision (approve/reject) |
+
+### `POST /run` — Request body
+
+```json
+{
+  "change_description": "Add PayPal support alongside existing Stripe integration",
+  "repo_path": "./payment/IBM-bob-payment-demo"
+}
+```
+
+### `POST /run` — Response
+
+```json
+{ "run_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6" }
+```
+
+### `GET /stream/{run_id}` — SSE events
+
+Events are emitted as `data: <json>\n\n` in the SSE stream:
+
+| Event name | Key payload fields |
+|---|---|
+| `pipeline_started` | *(empty)* |
+| `parallel_agents_done` | `affected_files`, `database_impact`, `tests_to_run` |
+| `impact_report_done` | `risk_level`, `impact_summary` |
+| `implementation_plan_done` | `implementation_plan` |
+| `awaiting_approval` | *(triggers the approve UI in the frontend)* |
+| `bob_execution_done` | `code_modified`, `affected_files` |
+| `test_results_done` | `test_results` |
+| `final_report_done` | `final_report`, `human_approved`, `errors` |
+| `error` | `message` |
+
+### `POST /approve/{run_id}` — Request body
+
+```json
+{ "approved": true }
+```
+
+
 
 ---
 
@@ -359,3 +491,9 @@ class AgentState(TypedDict):
 | `No test files found` | The target repo must have a `tests/` folder with `*.test.js` or `*.spec.js` files |
 | `No JS/TS files found` | The Dependency Agent only scans `.js / .ts / .jsx / .tsx` files |
 | JSON parse errors in output | Usually a model response format issue — check `errors` field in the final report |
+| `uvicorn: command not found` | Run `pip install uvicorn` inside the activated venv |
+| Port 8000 already in use | Change the port: `uvicorn api:app --reload --port 8001` |
+| Browser shows "index.html not found" | Ensure you start uvicorn **from** `d:\Work\Hackathon\IBM_BOB_2.0` (the directory containing `index.html`) |
+| SSE stream hangs / no events | Check the browser DevTools Network tab — if the `/stream/` request is pending, the pipeline is still running |
+| `_session` KeyError in pipeline | You are running `main.py` with a state dict that lacks `_session`; this field is only needed in web mode via `api.py` |
+

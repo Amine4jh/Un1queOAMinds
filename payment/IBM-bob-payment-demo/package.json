@@ -1,0 +1,22 @@
+{
+  "name": "payment-demo",
+  "version": "1.0.0",
+  "description": "A demo repository for a payment system to test dependency analysis.",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "jest",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "jest": {
+    "testMatch": [
+      "**/tests/**/*Test.js"
+    ]
+  }
+}
