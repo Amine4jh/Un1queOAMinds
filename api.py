@@ -8,6 +8,7 @@ Start with:
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 import uuid
@@ -144,7 +145,7 @@ app.add_middleware(
 
 class RunRequest(BaseModel):
     change_description: str
-    repo_path: str
+    repo_path: Optional[str] = None  # ignored — server always uses REPO_PATH env var
 
 
 class ApproveRequest(BaseModel):
@@ -172,10 +173,17 @@ def start_run(body: RunRequest):
     session = RunSession()
     runs[run_id] = session
 
+    # Always resolve repo_path from the server's env var so the frontend
+    # never needs to send it. Falls back to the bundled demo path.
+    resolved_repo_path = os.getenv(
+        "REPO_PATH",
+        "./payment/IBM-bob-payment-demo",
+    )
+
     initial_state: dict = {
         # ── Input ──────────────────────────────────────
         "change_description":  body.change_description,
-        "repo_path":           body.repo_path,
+        "repo_path":           resolved_repo_path,
         # ── Agent outputs (empty until agents run) ─────
         "affected_files":      [],
         "database_impact":     [],
