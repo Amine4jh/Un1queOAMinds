@@ -1,6 +1,6 @@
 # 🤖 Bob Change Impact Mode — IBM BOB 2.0
 
-> Analyse the impact of a code change **before** it is made.  
+> Know what a code change will break **before** you make it.
 > Powered by **IBM watsonx.ai** (Granite 4), orchestrated with **LangGraph**, and served via **FastAPI + Uvicorn**.
 
 ---
@@ -75,34 +75,32 @@ Shared LangGraph state       → agents/state.py
 
 All three analysis agents run **concurrently** using `ThreadPoolExecutor(max_workers=3)`.
 
-
-
 ---
 
 ## Agents
 
 ### 1. Dependency Agent (`agents/dependency/agent.py`)
 
-| Item | Detail |
-|---|---|
-| **Input** | `change_description`, `repo_path` |
-| **Output** | `affected_files: list[str]` |
+| Item             | Detail                                                                                                                                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Input**        | `change_description`, `repo_path`                                                                                                                                                                                                             |
+| **Output**       | `affected_files: list[str]`                                                                                                                                                                                                                   |
 | **What it does** | Walks the repository, reads every `.js / .ts / .jsx / .tsx` file (capped at 500 chars each, skipping `node_modules`, `.git`, `dist`, `build`), then asks the model to identify which files are directly or indirectly affected by the change. |
 
 ### 2. Database Agent (`agents/database/agent.py`)
 
-| Item | Detail |
-|---|---|
-| **Input** | `change_description`, `repo_path`, `affected_files` |
-| **Output** | `database_impact: list[{ table: str, risk: HIGH\|MEDIUM\|LOW }]` |
+| Item             | Detail                                                                                                                                                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Input**        | `change_description`, `repo_path`, `affected_files`                                                                                                                                                                                                                                                    |
+| **Output**       | `database_impact: list[{ table: str, risk: HIGH\|MEDIUM\|LOW }]`                                                                                                                                                                                                                                       |
 | **What it does** | Reads the affected source files, then searches the repo for schema/migration/model files (`.sql`, filenames containing `schema / migration / model / database / seed`, or files inside a `models/` directory). Passes all of this to the model to identify impacted DB tables and assign a risk level. |
 
 ### 3. Test Agent (`agents/test_agent/agent.py`)
 
-| Item | Detail |
-|---|---|
-| **Input** | `change_description`, `repo_path`, `affected_files` |
-| **Output** | `tests_to_run: list[str]` |
+| Item             | Detail                                                                                                                                                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Input**        | `change_description`, `repo_path`, `affected_files`                                                                                                                                                                            |
+| **Output**       | `tests_to_run: list[str]`                                                                                                                                                                                                      |
 | **What it does** | Discovers all `*.test.js / *.spec.js` (and `.ts / .jsx / .tsx` variants) under `<repo_path>/tests/`. Reads a 400-char snippet of each test, then asks the model which tests are relevant to the change and the affected files. |
 
 ---
@@ -186,13 +184,16 @@ IBM_BOB_2.0/
 ## Prerequisites
 
 **Option A — Python (Mode 1 / Mode 2)**
+
 - **Python 3.10+** — [Download](https://www.python.org/downloads/)
 - **pip** (bundled with Python)
 
 **Option B — Docker (Mode 3, no Python needed locally)**
+
 - **Docker Desktop** — [Download](https://www.docker.com/products/docker-desktop/) (free, Windows/Mac/Linux)
 
 **Both options require:**
+
 - An **IBM watsonx.ai** account with:
   - An API key
   - A project ID
@@ -217,16 +218,19 @@ python -m venv venv
 ### 3. Activate the virtual environment
 
 **Windows — PowerShell:**
+
 ```powershell
 .\venv\Scripts\Activate.ps1
 ```
 
 **Windows — Command Prompt:**
+
 ```cmd
 venv\Scripts\activate.bat
 ```
 
 **macOS / Linux:**
+
 ```bash
 source venv/bin/activate
 ```
@@ -241,14 +245,14 @@ pip install -r requirements.txt
 
 Dependencies installed:
 
-| Package | Purpose |
-|---|---|
-| `langgraph` | Multi-agent pipeline orchestration |
-| `langchain-core` | Core LangChain abstractions used by LangGraph |
-| `ibm-watsonx-ai` | IBM Granite model inference client |
-| `python-dotenv` | Loads `.env` credentials at runtime |
-| `fastapi` | REST API layer (for future frontend integration) |
-| `uvicorn` | ASGI server for FastAPI |
+| Package          | Purpose                                          |
+| ---------------- | ------------------------------------------------ |
+| `langgraph`      | Multi-agent pipeline orchestration               |
+| `langchain-core` | Core LangChain abstractions used by LangGraph    |
+| `ibm-watsonx-ai` | IBM Granite model inference client               |
+| `python-dotenv`  | Loads `.env` credentials at runtime              |
+| `fastapi`        | REST API layer (for future frontend integration) |
+| `uvicorn`        | ASGI server for FastAPI                          |
 
 ---
 
@@ -279,13 +283,13 @@ WATSONX_MODEL_ID=ibm/granite-4-h-small
 REPO_PATH=./payment/IBM-bob-payment-demo
 ```
 
-| Variable | Required | Description |
-|---|---|---|
-| `WATSONX_API_KEY` | ✅ | Your IBM Cloud API key |
-| `WATSONX_URL` | ✅ | Regional watsonx.ai endpoint |
-| `WATSONX_PROJECT_ID` | ✅ | Your watsonx.ai project ID |
-| `WATSONX_MODEL_ID` | optional | Defaults to `ibm/granite-4-h-small` |
-| `REPO_PATH` | set in `main.py` | Override in `main.py` if needed |
+| Variable             | Required         | Description                         |
+| -------------------- | ---------------- | ----------------------------------- |
+| `WATSONX_API_KEY`    | ✅               | Your IBM Cloud API key              |
+| `WATSONX_URL`        | ✅               | Regional watsonx.ai endpoint        |
+| `WATSONX_PROJECT_ID` | ✅               | Your watsonx.ai project ID          |
+| `WATSONX_MODEL_ID`   | optional         | Defaults to `ibm/granite-4-h-small` |
+| `REPO_PATH`          | set in `main.py` | Override in `main.py` if needed     |
 
 > 🔒 `.env` is listed in `.gitignore` and will never be committed.
 
@@ -302,6 +306,7 @@ REPO_PATH=./payment/IBM-bob-payment-demo
 No `venv`, no `pip`, no Python required on your machine — Docker handles everything.
 
 #### Prerequisites
+
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 - Your `.env` file filled in with IBM credentials (see [Configuration](#configuration))
 
@@ -351,10 +356,10 @@ http://localhost:8000
 
 #### What's bundled inside the image
 
-| Path inside container | Contents |
-|---|---|
-| `/app/api.py`, `/app/agents/` | The full Bob application |
-| `/app/index.html` | The frontend SPA |
+| Path inside container                | Contents                         |
+| ------------------------------------ | -------------------------------- |
+| `/app/api.py`, `/app/agents/`        | The full Bob application         |
+| `/app/index.html`                    | The frontend SPA                 |
 | `/app/payment/IBM-bob-payment-demo/` | The JS/TS demo repo Bob analyses |
 
 The demo repo is baked directly into the image — no volume mounts needed.
@@ -383,6 +388,7 @@ docker compose up --build
 > Requires Python + venv activated (see [Setup](#setup-virtual-environment)).
 
 `api.py` is the web entry point. It starts a FastAPI server that:
+
 - Serves the **`index.html`** frontend at `GET /`
 - Accepts pipeline runs via `POST /run`
 - Streams real-time progress via **Server-Sent Events** at `GET /stream/{run_id}`
@@ -395,11 +401,11 @@ docker compose up --build
 uvicorn api:app --reload --port 8000
 ```
 
-| Flag | Effect |
-|---|---|
-| `api:app` | Load the `app` object from `api.py` |
-| `--reload` | Auto-restart on file changes (dev mode) |
-| `--port 8000` | Listen on port 8000 (change freely) |
+| Flag          | Effect                                  |
+| ------------- | --------------------------------------- |
+| `api:app`     | Load the `app` object from `api.py`     |
+| `--reload`    | Auto-restart on file changes (dev mode) |
+| `--port 8000` | Listen on port 8000 (change freely)     |
 
 #### Optional flags
 
@@ -420,6 +426,7 @@ http://localhost:8000
 ```
 
 The browser loads `index.html`. Fill in:
+
 - **Change description** — plain-English description of the intended change
 - **Repository path** — path to the JS/TS repo Bob will analyse (e.g. `./payment/IBM-bob-payment-demo`)
 
@@ -487,11 +494,11 @@ deactivate
 
 All endpoints are served by `api.py` when running via uvicorn.
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Serves `index.html` (the frontend SPA) |
-| `POST` | `/run` | Start a new pipeline run. Returns a `run_id`. |
-| `GET` | `/stream/{run_id}` | SSE stream of pipeline events for the given run |
+| Method | Path                | Description                                     |
+| ------ | ------------------- | ----------------------------------------------- |
+| `GET`  | `/`                 | Serves `index.html` (the frontend SPA)          |
+| `POST` | `/run`              | Start a new pipeline run. Returns a `run_id`.   |
+| `GET`  | `/stream/{run_id}`  | SSE stream of pipeline events for the given run |
 | `POST` | `/approve/{run_id}` | Submit human approval decision (approve/reject) |
 
 ### `POST /run` — Request body
@@ -513,25 +520,23 @@ All endpoints are served by `api.py` when running via uvicorn.
 
 Events are emitted as `data: <json>\n\n` in the SSE stream:
 
-| Event name | Key payload fields |
-|---|---|
-| `pipeline_started` | *(empty)* |
-| `parallel_agents_done` | `affected_files`, `database_impact`, `tests_to_run` |
-| `impact_report_done` | `risk_level`, `impact_summary` |
-| `implementation_plan_done` | `implementation_plan` |
-| `awaiting_approval` | *(triggers the approve UI in the frontend)* |
-| `bob_execution_done` | `code_modified`, `affected_files` |
-| `test_results_done` | `test_results` |
-| `final_report_done` | `final_report`, `human_approved`, `errors` |
-| `error` | `message` |
+| Event name                 | Key payload fields                                  |
+| -------------------------- | --------------------------------------------------- |
+| `pipeline_started`         | _(empty)_                                           |
+| `parallel_agents_done`     | `affected_files`, `database_impact`, `tests_to_run` |
+| `impact_report_done`       | `risk_level`, `impact_summary`                      |
+| `implementation_plan_done` | `implementation_plan`                               |
+| `awaiting_approval`        | _(triggers the approve UI in the frontend)_         |
+| `bob_execution_done`       | `code_modified`, `affected_files`                   |
+| `test_results_done`        | `test_results`                                      |
+| `final_report_done`        | `final_report`, `human_approved`, `errors`          |
+| `error`                    | `message`                                           |
 
 ### `POST /approve/{run_id}` — Request body
 
 ```json
 { "approved": true }
 ```
-
-
 
 ---
 
@@ -580,22 +585,21 @@ class AgentState(TypedDict):
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---|---|
-| `ModuleNotFoundError` | Activate the venv and run `pip install -r requirements.txt` |
-| PowerShell script blocked | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then retry activation |
-| `KeyError: WATSONX_API_KEY` | Ensure `.env` exists and contains the correct key |
-| `AuthenticationError` | Double-check `WATSONX_API_KEY` and `WATSONX_PROJECT_ID` |
-| `No test files found` | The target repo must have a `tests/` folder with `*.test.js` or `*.spec.js` files |
-| `No JS/TS files found` | The Dependency Agent only scans `.js / .ts / .jsx / .tsx` files |
-| JSON parse errors in output | Usually a model response format issue — check `errors` field in the final report |
-| `uvicorn: command not found` | Run `pip install uvicorn` inside the activated venv |
-| Port 8000 already in use | Change the port: `uvicorn api:app --reload --port 8001` or `docker run -p 8001:8000 ...` |
-| Browser shows "index.html not found" | Ensure you start uvicorn **from** `d:\Work\Hackathon\IBM_BOB_2.0` (the directory containing `index.html`) |
-| SSE stream hangs / no events | Check the browser DevTools Network tab — if the `/stream/` request is pending, the pipeline is still running |
-| `_session` KeyError in pipeline | You are running `main.py` with a state dict that lacks `_session`; this field is only needed in web mode via `api.py` |
-| `docker: command not found` | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it is running |
-| `docker compose up` — env vars missing | Ensure `.env` exists in the same folder as `docker-compose.yml` and contains all four `WATSONX_*` keys |
-| Docker build fails on `COPY payment/` | Run `xcopy /E /I payment_demo IBM_BOB_2.0\payment\IBM-bob-payment-demo` from `d:\Work\Hackathon` first |
-| Container starts but UI is blank | Check `docker compose logs -f bob` for Python import errors; usually a missing env var |
-
+| Problem                                | Solution                                                                                                              |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `ModuleNotFoundError`                  | Activate the venv and run `pip install -r requirements.txt`                                                           |
+| PowerShell script blocked              | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then retry activation                                      |
+| `KeyError: WATSONX_API_KEY`            | Ensure `.env` exists and contains the correct key                                                                     |
+| `AuthenticationError`                  | Double-check `WATSONX_API_KEY` and `WATSONX_PROJECT_ID`                                                               |
+| `No test files found`                  | The target repo must have a `tests/` folder with `*.test.js` or `*.spec.js` files                                     |
+| `No JS/TS files found`                 | The Dependency Agent only scans `.js / .ts / .jsx / .tsx` files                                                       |
+| JSON parse errors in output            | Usually a model response format issue — check `errors` field in the final report                                      |
+| `uvicorn: command not found`           | Run `pip install uvicorn` inside the activated venv                                                                   |
+| Port 8000 already in use               | Change the port: `uvicorn api:app --reload --port 8001` or `docker run -p 8001:8000 ...`                              |
+| Browser shows "index.html not found"   | Ensure you start uvicorn **from** `d:\Work\Hackathon\IBM_BOB_2.0` (the directory containing `index.html`)             |
+| SSE stream hangs / no events           | Check the browser DevTools Network tab — if the `/stream/` request is pending, the pipeline is still running          |
+| `_session` KeyError in pipeline        | You are running `main.py` with a state dict that lacks `_session`; this field is only needed in web mode via `api.py` |
+| `docker: command not found`            | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it is running                    |
+| `docker compose up` — env vars missing | Ensure `.env` exists in the same folder as `docker-compose.yml` and contains all four `WATSONX_*` keys                |
+| Docker build fails on `COPY payment/`  | Run `xcopy /E /I payment_demo IBM_BOB_2.0\payment\IBM-bob-payment-demo` from `d:\Work\Hackathon` first                |
+| Container starts but UI is blank       | Check `docker compose logs -f bob` for Python import errors; usually a missing env var                                |
