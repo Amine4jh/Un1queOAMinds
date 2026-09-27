@@ -16,8 +16,9 @@
 - [Setup (Virtual Environment)](#setup-virtual-environment)
 - [Configuration](#configuration)
 - [Running the Program](#running-the-program)
-  - [Mode 1 — Web UI (Uvicorn / FastAPI)](#mode-1--web-ui-uvicorn--fastapi-recommended)
-  - [Mode 2 — CLI (terminal)](#mode-2--cli-terminal)
+  - [Mode 1 — Docker (easiest, no Python needed) ✅ Recommended](#mode-1--docker-easiest-no-python-needed--recommended)
+  - [Mode 2 — Web UI (Uvicorn / FastAPI)](#mode-2--web-ui-uvicorn--fastapi)
+  - [Mode 3 — CLI (terminal)](#mode-3--cli-terminal)
 - [API Endpoints](#api-endpoints)
 - [State Schema](#state-schema)
 - [Troubleshooting](#troubleshooting)
@@ -151,10 +152,16 @@ IBM_BOB_2.0/
 ├── main.py                        # CLI entry point — interactive terminal loop
 ├── index.html                     # Single-page frontend served by api.py at GET /
 ├── requirements.txt               # Python dependencies
+├── Dockerfile                     # Docker image definition
+├── docker-compose.yml             # Local Docker orchestration
+├── .dockerignore                  # Files excluded from Docker build context
 ├── .env.example                   # Environment variable template
 ├── .env                           # Your local credentials (git-ignored)
 ├── .gitignore
 ├── CONCEPTION.md                  # Project design document
+│
+├── payment/
+│   └── IBM-bob-payment-demo/      # Demo JS/TS repo Bob analyses (bundled)
 │
 └── agents/
     ├── __init__.py
@@ -178,8 +185,14 @@ IBM_BOB_2.0/
 
 ## Prerequisites
 
+**Option A — Python (Mode 1 / Mode 2)**
 - **Python 3.10+** — [Download](https://www.python.org/downloads/)
 - **pip** (bundled with Python)
+
+**Option B — Docker (Mode 3, no Python needed locally)**
+- **Docker Desktop** — [Download](https://www.docker.com/products/docker-desktop/) (free, Windows/Mac/Linux)
+
+**Both options require:**
 - An **IBM watsonx.ai** account with:
   - An API key
   - A project ID
@@ -280,11 +293,94 @@ REPO_PATH=./payment/IBM-bob-payment-demo
 
 ## Running the Program
 
-> **Always activate the virtual environment first** (see [Setup](#setup-virtual-environment)).
+> Choose the mode that fits you. **Docker is the fastest way to get started** — no Python setup needed.
 
 ---
 
-### Mode 1 — Web UI (Uvicorn / FastAPI) ✅ Recommended
+### Mode 1 — Docker (easiest, no Python needed) ✅ Recommended
+
+No `venv`, no `pip`, no Python required on your machine — Docker handles everything.
+
+#### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- Your `.env` file filled in with IBM credentials (see [Configuration](#configuration))
+
+#### Option A — docker compose (one command)
+
+```powershell
+# From d:\Work\Hackathon\IBM_BOB_2.0:
+
+# Build the image and start the container
+docker compose up --build
+
+# Run in the background (detached)
+docker compose up --build -d
+
+# View logs when running in background
+docker compose logs -f bob
+
+# Stop and remove the container
+docker compose down
+```
+
+Docker Compose automatically reads your `.env` file and passes the credentials to the container.
+
+#### Option B — plain docker run (no compose)
+
+```powershell
+# Build the image
+docker build -t ibm-bob .
+
+# Run it, passing your .env file
+docker run --env-file .env -p 8000:8000 ibm-bob
+
+# Run in the background
+docker run --env-file .env -p 8000:8000 -d --name ibm_bob ibm-bob
+
+# Stop the background container
+docker stop ibm_bob
+```
+
+#### Open the UI
+
+Once running (either option), open:
+
+```
+http://localhost:8000
+```
+
+#### What's bundled inside the image
+
+| Path inside container | Contents |
+|---|---|
+| `/app/api.py`, `/app/agents/` | The full Bob application |
+| `/app/index.html` | The frontend SPA |
+| `/app/payment/IBM-bob-payment-demo/` | The JS/TS demo repo Bob analyses |
+
+The demo repo is baked directly into the image — no volume mounts needed.
+
+#### Useful docker commands
+
+```powershell
+# See running containers
+docker ps
+
+# Live logs
+docker compose logs -f bob
+
+# Open a shell inside the container (debugging)
+docker compose exec bob bash
+
+# Remove the image and start fresh
+docker compose down --rmi local
+docker compose up --build
+```
+
+---
+
+### Mode 2 — Web UI (Uvicorn / FastAPI)
+
+> Requires Python + venv activated (see [Setup](#setup-virtual-environment)).
 
 `api.py` is the web entry point. It starts a FastAPI server that:
 - Serves the **`index.html`** frontend at `GET /`
@@ -308,7 +404,7 @@ uvicorn api:app --reload --port 8000
 #### Optional flags
 
 ```powershell
-# Bind to all interfaces (useful for LAN / Docker)
+# Bind to all interfaces (useful for LAN)
 uvicorn api:app --reload --host 0.0.0.0 --port 8000
 
 # Production mode (no reload, multiple workers)
@@ -341,7 +437,9 @@ INFO:     Application startup complete.
 
 ---
 
-### Mode 2 — CLI (terminal)
+### Mode 3 — CLI (terminal)
+
+> Requires Python + venv activated (see [Setup](#setup-virtual-environment)).
 
 `main.py` runs the full pipeline interactively in your terminal (no browser required). Human approval is via a simple `y/n` prompt.
 
@@ -492,8 +590,12 @@ class AgentState(TypedDict):
 | `No JS/TS files found` | The Dependency Agent only scans `.js / .ts / .jsx / .tsx` files |
 | JSON parse errors in output | Usually a model response format issue — check `errors` field in the final report |
 | `uvicorn: command not found` | Run `pip install uvicorn` inside the activated venv |
-| Port 8000 already in use | Change the port: `uvicorn api:app --reload --port 8001` |
+| Port 8000 already in use | Change the port: `uvicorn api:app --reload --port 8001` or `docker run -p 8001:8000 ...` |
 | Browser shows "index.html not found" | Ensure you start uvicorn **from** `d:\Work\Hackathon\IBM_BOB_2.0` (the directory containing `index.html`) |
 | SSE stream hangs / no events | Check the browser DevTools Network tab — if the `/stream/` request is pending, the pipeline is still running |
 | `_session` KeyError in pipeline | You are running `main.py` with a state dict that lacks `_session`; this field is only needed in web mode via `api.py` |
+| `docker: command not found` | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it is running |
+| `docker compose up` — env vars missing | Ensure `.env` exists in the same folder as `docker-compose.yml` and contains all four `WATSONX_*` keys |
+| Docker build fails on `COPY payment/` | Run `xcopy /E /I payment_demo IBM_BOB_2.0\payment\IBM-bob-payment-demo` from `d:\Work\Hackathon` first |
+| Container starts but UI is blank | Check `docker compose logs -f bob` for Python import errors; usually a missing env var |
 
